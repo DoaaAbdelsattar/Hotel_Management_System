@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management System - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-hotel"></i>
+                <span>Hotel Management</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="/guests"><i class="fas fa-users"></i> Guests</a></li>
+                <li><a href="/bookings"><i class="fas fa-calendar-check"></i> Bookings</a></li>
+                <li><a href="/rooms"><i class="fas fa-bed"></i> Rooms</a></li>
+                <li><a href="/reports"><i class="fas fa-chart-bar"></i> Reports</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header class="dashboard-header">
+            <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+            <p class="date-display">Today: {{ today }}</p>
+        </header>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #4CAF50;">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ stats.total_guests }}</h3>
+                    <p>Total Guests</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #2196F3;">
+                    <i class="fas fa-bed"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ stats.available_rooms }}</h3>
+                    <p>Available Rooms</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #FF9800;">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ stats.total_bookings }}</h3>
+                    <p>Total Bookings</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #9C27B0;">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>${{ "%.2f"|format(stats.total_revenue) }}</h3>
+                    <p>Total Revenue</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room Status Summary -->
+        <div class="section">
+            <h2><i class="fas fa-chart-pie"></i> Room Status Summary</h2>
+            <div class="room-status">
+                {% for status in room_status %}
+                <div class="status-item">
+                    <span class="status-badge {{ status[0].lower() }}">{{ status[0] }}</span>
+                    <span class="status-count">{{ status[1] }} rooms</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="two-column">
+            <!-- Upcoming Check-ins -->
+            <div class="section">
+                <h2><i class="fas fa-calendar-plus"></i> Upcoming Check-ins</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Guest Name</th>
+                                <th>Room</th>
+                                <th>Check-in Date</th>
+                                <th>Room Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for checkin in upcoming_checkins %}
+                            <tr>
+                                <td>{{ checkin.GuestName }}</td>
+                                <td>{{ checkin.RoomNumber }}</td>
+                                <td>{{ checkin.Check_In_Date }}</td>
+                                <td><span class="badge">{{ checkin.RoomType }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Bookings -->
+            <div class="section">
+                <h2><i class="fas fa-history"></i> Recent Bookings</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Guest Name</th>
+                                <th>Room</th>
+                                <th>Booking Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in recent_bookings %}
+                            <tr>
+                                <td>{{ booking.GuestName }}</td>
+                                <td>{{ booking.RoomNumber }}</td>
+                                <td>{{ booking.Booking_Date }}</td>
+                                <td><span class="status-badge {{ booking.Status.lower() }}">{{ booking.Status }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="section">
+            <h2><i class="fas fa-rocket"></i> Quick Actions</h2>
+            <div class="quick-links">
+                <a href="/guests" class="quick-link">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Add New Guest</span>
+                </a>
+                <a href="/bookings" class="quick-link">
+                    <i class="fas fa-book"></i>
+                    <span>Create Booking</span>
+                </a>
+                <a href="/rooms" class="quick-link">
+                    <i class="fas fa-door-open"></i>
+                    <span>Manage Rooms</span>
+                </a>
+                <a href="/reports" class="quick-link">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Generate Report</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Hotel Management System &copy; 2024 | Database: Hotels_db</p>
+    </footer>
+</body>
+</html>

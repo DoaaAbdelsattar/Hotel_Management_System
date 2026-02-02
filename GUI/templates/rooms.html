@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management - Rooms</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-hotel"></i>
+                <span>Hotel Management</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="/guests"><i class="fas fa-users"></i> Guests</a></li>
+                <li><a href="/bookings"><i class="fas fa-calendar-check"></i> Bookings</a></li>
+                <li><a href="/rooms" class="active"><i class="fas fa-bed"></i> Rooms</a></li>
+                <li><a href="/reports"><i class="fas fa-chart-bar"></i> Reports</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-bed"></i> Room Management</h1>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="showAddRoomForm()">
+                    <i class="fas fa-plus"></i> Add Room
+                </button>
+                <select id="floorFilter" class="btn btn-secondary" onchange="filterRooms()">
+                    <option value="all">All Floors</option>
+                    {% for floor in floors|sort %}
+                    <option value="{{ floor }}">Floor {{ floor }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Add Room Form (Hidden by default) -->
+        <div id="addRoomForm" class="section" style="display: none;">
+            <h2><i class="fas fa-plus-circle"></i> Add New Room</h2>
+            <form method="POST" action="{{ url_for('add_room') }}" class="room-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="number">Room Number</label>
+                        <input type="number" name="number" id="number" required class="form-control" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="floor_hotel">Floor</label>
+                        <input type="number" name="floor_hotel" id="floor_hotel" required class="form-control" min="0">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="roomtype_id">Room Type</label>
+                        <select name="roomtype_id" id="roomtype_id" required class="form-control">
+                            <option value="">Select Room Type</option>
+                            {% for room_type in room_types %}
+                            <option value="{{ room_type.RoomType_ID }}">{{ room_type.Type_NameR }} (${{ "%.2f"|format(room_type.PricePerNight) }}/night)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff_id">Staff Assigned</label>
+                        <select name="staff_id" id="staff_id" required class="form-control">
+                            <option value="">Select Staff Member</option>
+                            {% for staff in staff_list %}
+                            <option value="{{ staff.StaffShift_ID }}">{{ staff.F_name }} {{ staff.L_name }} ({{ staff.Role }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-buttons">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Add Room
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="hideAddRoomForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Room Status Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #4CAF50;">
+                    <i class="fas fa-door-open"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ available_count }}</h3>
+                    <p>Available</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #F44336;">
+                    <i class="fas fa-door-closed"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ occupied_count }}</h3>
+                    <p>Occupied</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #FF9800;">
+                    <i class="fas fa-broom"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ cleaning_count }}</h3>
+                    <p>Cleaning</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #9C27B0;">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ total_rooms }}</h3>
+                    <p>Total Rooms</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floor-by-Floor View -->
+        <div class="section">
+            <h2><i class="fas fa-layer-group"></i> Floor Overview</h2>
+            <div class="floor-container" id="floorContainer">
+                {% if floor_data %}
+                    {% for floor, floor_rooms in floor_data.items()|sort %}
+                    <div class="floor-section" data-floor="{{ floor }}">
+                        <h3>Floor {{ floor }}</h3>
+                        <div class="room-grid">
+                            {% for room in floor_rooms|sort(attribute='Number') %}
+                            <div class="room-card {{ room['Status'].lower() if room['Status'] else 'unknown' }}">
+                                <div class="room-header">
+                                    <span class="room-number">Room {{ room['Number'] if room['Number'] else 'N/A' }}</span>
+                                    <span class="room-status-badge">{{ room['Status'] if room['Status'] else 'Unknown' }}</span>
+                                </div>
+                                <div class="room-details">
+                                    <div class="room-type">
+                                        <i class="fas fa-home"></i>
+                                        <span>{{ room['RoomType'] if room['RoomType'] else 'N/A' }}</span>
+                                    </div>
+                                    <div class="room-price">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                        <span>${{ "%.2f"|format(room['PricePerNight']) if room['PricePerNight'] else '0.00' }}/night</span>
+                                    </div>
+                                    <div class="room-staff">
+                                        <i class="fas fa-user"></i>
+                                        <span>{{ room['StaffName'] if room['StaffName'] else 'N/A' }} ({{ room['Role'] if room['Role'] else 'N/A' }})</span>
+                                    </div>
+                                </div>
+                                <div class="room-actions">
+                                    <!-- Update Status Form -->
+                                    <form method="POST" action="{{ url_for('update_room_status', room_id=room['R_ID']) }}" class="status-form">
+                                        <select name="status" class="status-select" onchange="this.form.submit()">
+                                            <option value="Available" {% if room['Status'] == 'Available' %}selected{% endif %}>Available</option>
+                                            <option value="Occupied" {% if room['Status'] == 'Occupied' %}selected{% endif %}>Occupied</option>
+                                            <option value="Cleaning" {% if room['Status'] == 'Cleaning' %}selected{% endif %}>Cleaning</option>
+                                        </select>
+                                    </form>
+                                    
+                                    <a href="{{ url_for('delete_room', room_id=room['R_ID']) }}" class="btn btn-danger btn-small" title="Delete" onclick="return confirm('Are you sure you want to delete this room?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No room data available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Room Type Distribution -->
+        <div class="section">
+            <h2><i class="fas fa-chart-pie"></i> Room Type Distribution</h2>
+            <div class="room-type-stats">
+                {% if room_type_stats %}
+                <div class="room-type-grid">
+                    {% for room_type, stats in room_type_stats.items() %}
+                    <div class="room-type-item">
+                        <div class="room-type-header">
+                            <span class="room-type-name">{{ room_type }}</span>
+                            <span class="room-type-count">{{ stats['count'] }} rooms</span>
+                        </div>
+                        <div class="room-type-details">
+                            <div class="type-price">${{ "%.2f"|format(stats['avg_price']) }} avg/night</div>
+                            <div class="type-availability">{{ stats['available'] }} available</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p>No room type statistics available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Hotel Management System &copy; 2024 | Total Rooms: {{ total_rooms }}</p>
+    </footer>
+
+    <script>
+        function filterRooms() {
+            const filterValue = document.getElementById('floorFilter').value;
+            const floorSections = document.querySelectorAll('.floor-section');
+            
+            floorSections.forEach(section => {
+                const floor = section.getAttribute('data-floor');
+                if (filterValue === 'all' || floor === filterValue) {
+                    section.style.display = 'block';
+                } else {
+                    section.style.display = 'none';
+                }
+            });
+        }
+        
+        function showAddRoomForm() {
+            document.getElementById('addRoomForm').style.display = 'block';
+        }
+        
+        function hideAddRoomForm() {
+            document.getElementById('addRoomForm').style.display = 'none';
+        }
+        
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(function(message) {
+                message.style.display = 'none';
+            });
+        }, 5000);
+    </script>
+
+    <style>
+        .floor-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 1rem;
+        }
+        
+        .floor-section h3 {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .room-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        
+        .room-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .room-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .room-card.available {
+            border-color: #4CAF50;
+        }
+        
+        .room-card.occupied {
+            border-color: #F44336;
+        }
+        
+        .room-card.cleaning {
+            border-color: #FF9800;
+        }
+        
+        .room-card.unknown {
+            border-color: #9E9E9E;
+        }
+        
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .room-number {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .room-status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .room-card.available .room-status-badge {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+        
+        .room-card.occupied .room-status-badge {
+            background: #FFEBEE;
+            color: #C62828;
+        }
+        
+        .room-card.cleaning .room-status-badge {
+            background: #FFF3E0;
+            color: #EF6C00;
+        }
+        
+        .room-card.unknown .room-status-badge {
+            background: #F5F5F5;
+            color: #757575;
+        }
+        
+        .room-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .room-details > div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .room-details i {
+            width: 16px;
+            color: #666;
+        }
+        
+        .room-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .status-form {
+            flex: 1;
+        }
+        
+        .status-select {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        .room-type-stats {
+            margin-top: 1rem;
+        }
+        
+        .room-type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .room-type-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #9C27B0;
+        }
+        
+        .room-type-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .room-type-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .room-type-count {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .room-type-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        select.btn {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            padding-right: 30px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
+        }
+        
+        .room-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        
+        .flash-message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .flash-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .flash-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .flash-message i {
+            font-size: 1.2rem;
+        }
+    </style>
+</body>
+</html>

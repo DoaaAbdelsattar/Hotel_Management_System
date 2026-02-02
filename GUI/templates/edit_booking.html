@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Booking</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<nav class="navbar">
+    <div class="nav-container">
+        <div class="logo">
+            <i class="fas fa-hotel"></i>
+            <span>Hotel Management</span>
+        </div>
+
+        <ul class="nav-menu">
+            <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="/guests"><i class="fas fa-users"></i> Guests</a></li>
+            <li><a href="/bookings"><i class="fas fa-calendar-check"></i> Bookings</a></li>
+            <li><a href="/rooms"><i class="fas fa-bed"></i> Rooms</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container">
+
+    <div class="page-header">
+        <h1><i class="fas fa-edit"></i> Edit Booking #{{ booking.B_ID }}</h1>
+        <a href="{{ url_for('view_booking', booking_id=booking.B_ID) }}" class="btn btn-primary">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, msg in messages %}
+            <div class="flash-message {{ category }}">{{ msg }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <form action="" method="POST" class="booking-form">
+
+        <div class="form-group">
+            <label>Guest</label>
+            <select name="guest_id" class="form-control" required>
+                {% for g in guests %}
+                    <option value="{{ g.G_ID }}" {% if g.G_ID == booking.G_ID %}selected{% endif %}>
+                        {{ g.F_name }} {{ g.L_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Room</label>
+            <select name="room_id" class="form-control" required>
+                {% for r in rooms %}
+                    <option value="{{ r.Room_ID }}" {% if r.Room_ID == booking.Room_ID %}selected{% endif %}>
+                        Room {{ r.Number }} ({{ r.Type_NameR }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Check-in Date</label>
+                <input type="date" name="check_in" class="form-control"
+                       value="{{ booking.Check_In_Date.strftime('%Y-%m-%d') }}">
+            </div>
+
+            <div class="form-group">
+                <label>Check-out Date</label>
+                <input type="date" name="check_out" class="form-control"
+                       value="{{ booking.Check_Out_Date.strftime('%Y-%m-%d') }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Meal Plan</label>
+            <select name="meal_plan" class="form-control">
+                <option {% if booking.Meal_Plan == 'None' %}selected{% endif %}>None</option>
+                <option {% if booking.Meal_Plan == 'Breakfast' %}selected{% endif %}>Breakfast</option>
+                <option {% if booking.Meal_Plan == 'Half Board' %}selected{% endif %}>Half Board</option>
+                <option {% if booking.Meal_Plan == 'Full Board' %}selected{% endif %}>Full Board</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <select name="status" class="form-control">
+                <option {% if booking.Status == 'Confirmed' %}selected{% endif %}>Confirmed</option>
+                <option {% if booking.Status == 'Checked-in' %}selected{% endif %}>Checked-in</option>
+                <option {% if booking.Status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-success">
+            <i class="fas fa-save"></i> Save Changes
+        </button>
+
+    </form>
+
+</div>
+
+<footer class="footer">
+    <p>Hotel Management System © 2024</p>
+</footer>
+
+</body>
+</html>

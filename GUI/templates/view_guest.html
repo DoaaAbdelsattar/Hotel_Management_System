@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Guest - Hotel Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-hotel"></i>
+                <span>Hotel Management</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="/guests"><i class="fas fa-users"></i> Guests</a></li>
+                <li><a href="/bookings"><i class="fas fa-calendar-check"></i> Bookings</a></li>
+                <li><a href="/rooms"><i class="fas fa-bed"></i> Rooms</a></li>
+                <li><a href="/reports"><i class="fas fa-chart-bar"></i> Reports</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-user"></i> Guest Details</h1>
+            <div class="action-buttons">
+                <a href="{{ url_for('edit_guest', guest_id=guest.G_ID) }}" class="btn btn-secondary">
+                    <i class="fas fa-edit"></i> Edit Guest
+                </a>
+                <a href="{{ url_for('guests') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Guests
+                </a>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="two-column">
+            <!-- Guest Information -->
+            <div class="section">
+                <h2><i class="fas fa-info-circle"></i> Guest Information</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Full Name:</strong>
+                        <span>{{ guest.F_name }} {{ guest.L_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Email:</strong>
+                        <span>{{ guest.Email if guest.Email else 'Not provided' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Age:</strong>
+                        <span>{{ guest.Age }}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>SSD:</strong>
+                        <span>{{ guest.SSD }}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Phone Numbers:</strong>
+                        <div class="phone-list">
+                            {% if phones %}
+                                {% for phone in phones %}
+                                <span class="phone-badge">{{ phone }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="no-phone">No phone numbers</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guest Bookings -->
+            <div class="section">
+                <h2><i class="fas fa-calendar-alt"></i> Booking History</h2>
+                {% if bookings %}
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Booking ID</th>
+                                <th>Room</th>
+                                <th>Room Type</th>
+                                <th>Check-in</th>
+                                <th>Check-out</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in bookings %}
+                            <tr>
+                                <td><a href="{{ url_for('view_booking', booking_id=booking.B_ID) }}">#{{ booking.B_ID }}</a></td>
+                                <td>{{ booking.Number }}</td>
+                                <td>{{ booking.Type_NameR }}</td>
+                                <td>{{ booking.Check_In_Date.strftime('%Y-%m-%d') if booking.Check_In_Date else 'N/A' }}</td>
+                                <td>{{ booking.Check_Out_Date.strftime('%Y-%m-%d') if booking.Check_Out_Date else 'N/A' }}</td>
+                                <td>
+                                    <span class="status-badge {{ booking.Status.lower() }}">
+                                        {{ booking.Status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p>No bookings found for this guest.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Hotel Management System &copy; 2024</p>
+    </footer>
+
+    <style>
+        .info-grid {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-item strong {
+            color: #2c3e50;
+        }
+        
+        .phone-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .phone-badge {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            display: inline-block;
+            width: fit-content;
+        }
+        
+        .no-phone {
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</body>
+</html>

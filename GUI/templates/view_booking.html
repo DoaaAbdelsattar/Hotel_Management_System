@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Booking - Hotel Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-hotel"></i>
+                <span>Hotel Management</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="/guests"><i class="fas fa-users"></i> Guests</a></li>
+                <li><a href="/bookings"><i class="fas fa-calendar-check"></i> Bookings</a></li>
+                <li><a href="/rooms"><i class="fas fa-bed"></i> Rooms</a></li>
+                <li><a href="/reports"><i class="fas fa-chart-bar"></i> Reports</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-calendar-check"></i> Booking Details #{{ booking.B_ID }}</h1>
+            <div class="action-buttons">
+
+                <!-- ✅ زرار EDIT بعد التعديل -->
+                <a href="{{ url_for('edit_booking', booking_id=booking.B_ID) }}" class="btn btn-secondary">
+                    <i class="fas fa-edit"></i> Edit Booking
+                </a>
+
+                {% if booking.Status == 'Confirmed' %}
+                <a href="{{ url_for('checkin_booking', booking_id=booking.B_ID) }}" class="btn btn-success" onclick="return confirm('Check in booking #{{ booking.B_ID }}?')">
+                    <i class="fas fa-door-open"></i> Check-in
+                </a>
+                {% endif %}
+                
+                <a href="{{ url_for('bookings') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Bookings
+                </a>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="two-column">
+
+            <!-- Booking Information -->
+            <div class="section">
+                <h2><i class="fas fa-info-circle"></i> Booking Information</h2>
+                <div class="info-grid">
+                    <div class="info-item"><strong>Booking ID:</strong><span>#{{ booking.B_ID }}</span></div>
+                    <div class="info-item"><strong>Guest:</strong><span>{{ booking.GuestName }}</span></div>
+                    <div class="info-item"><strong>Room:</strong><span>Room {{ booking.RoomNumber }} ({{ booking.RoomType }})</span></div>
+                    <div class="info-item"><strong>Check-in Date:</strong>
+                        <span>{{ booking.Check_In_Date.strftime('%Y-%m-%d') if booking.Check_In_Date else 'N/A' }}</span></div>
+                    <div class="info-item"><strong>Check-out Date:</strong>
+                        <span>{{ booking.Check_Out_Date.strftime('%Y-%m-%d') if booking.Check_Out_Date else 'N/A' }}</span></div>
+                    <div class="info-item"><strong>Stay Duration:</strong><span>{{ booking.StayDuration }} nights</span></div>
+                    <div class="info-item"><strong>Meal Plan:</strong>
+                        <span class="meal-badge {{ booking.Meal_Plan.lower().replace(' ', '-') }}">{{ booking.Meal_Plan }}</span></div>
+                    <div class="info-item"><strong>Status:</strong>
+                        <span class="status-badge {{ booking.Status.lower() }}">{{ booking.Status }}</span></div>
+                    <div class="info-item"><strong>Booking Date:</strong>
+                        <span>{{ booking.Booking_Date.strftime('%Y-%m-%d') if booking.Booking_Date else 'N/A' }}</span></div>
+                </div>
+            </div>
+
+            <!-- Payment Information -->
+            <div class="section">
+                <h2><i class="fas fa-money-bill-wave"></i> Payment Information</h2>
+
+                {% if booking.Amount %}
+
+                <div class="info-grid">
+                    <div class="info-item"><strong>Amount Paid:</strong><span>${{ "%.2f"|format(booking.Amount) }}</span></div>
+                    <div class="info-item"><strong>Payment Method:</strong><span>{{ booking.Payment_Method }}</span></div>
+                    <div class="info-item"><strong>Payment Date:</strong>
+                        <span>{{ booking.Payment_Date.strftime('%Y-%m-%d') if booking.Payment_Date else 'N/A' }}</span></div>
+                    <div class="info-item"><strong>Calculated Total:</strong>
+                        <span>${{ "%.2f"|format(booking.CalculatedTotal) if booking.CalculatedTotal else '0.00' }}</span></div>
+                </div>
+
+                {% else %}
+                <p>No payment recorded for this booking.</p>
+
+                <h3 style="margin-top:20px;">Add Payment</h3>
+                <form method="POST" action="{{ url_for('add_payment', booking_id=booking.B_ID) }}" class="payment-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="amount">Amount</label>
+                            <input type="number" name="amount" id="amount" step="0.01" min="0" class="form-control"
+                                   value="{{ booking.CalculatedTotal if booking.CalculatedTotal else 0 }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="payment_method">Payment Method</label>
+                            <select name="payment_method" id="payment_method" class="form-control" required>
+                                <option value="Cash">Cash</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Online">Online</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-success" type="submit"><i class="fas fa-check"></i> Record Payment</button>
+                </form>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Hotel Management System © 2024</p>
+    </footer>
+
+</body>
+</html>

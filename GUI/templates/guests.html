@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management - Guests</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-hotel"></i>
+                <span>Hotel Management</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="/guests" class="active"><i class="fas fa-users"></i> Guests</a></li>
+                <li><a href="/bookings"><i class="fas fa-calendar-check"></i> Bookings</a></li>
+                <li><a href="/rooms"><i class="fas fa-bed"></i> Rooms</a></li>
+                <li><a href="/reports"><i class="fas fa-chart-bar"></i> Reports</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-users"></i> Guest Management</h1>
+            <div class="search-box">
+                <input type="text" placeholder="Search guests..." id="searchInput">
+                <button class="btn btn-primary" onclick="searchGuests()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="table-container">
+                <table id="guestsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Email</th>
+                            <th>Age</th>
+                            <th>SSD</th>
+                            <th>Phone Numbers</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if guests %}
+                            {% for guest in guests %}
+                            <tr>
+                                <td>{{ guest.G_ID if guest.G_ID else 'N/A' }}</td>
+                                <td>{{ guest.F_name if guest.F_name else 'N/A' }}</td>
+                                <td>{{ guest.L_name if guest.L_name else 'N/A' }}</td>
+                                <td>{{ guest.Email if guest.Email else 'N/A' }}</td>
+                                <td><span class="badge">{{ guest.Age if guest.Age else 'N/A' }}</span></td>
+                                <td><small>{{ guest.SSD if guest.SSD else 'N/A' }}</small></td>
+                                <td>
+                                    {% if guest.Phones %}
+                                        <div class="phone-list">
+                                            {% set phones_list = guest.Phones.split(', ') if guest.Phones else [] %}
+                                            {% for phone in phones_list %}
+                                            <span class="phone-badge">{{ phone if phone else 'N/A' }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <span class="no-phone">No phone</span>
+                                    {% endif %}
+                                </td>
+                                <td class="action-buttons">
+                                    <button class="btn btn-secondary btn-small" title="Edit" onclick="editGuest('{{ guest.G_ID if guest.G_ID else 0 }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-success btn-small" title="View Details" onclick="viewGuest('{{ guest.G_ID if guest.G_ID else 0 }}')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 20px;">
+                                    No guests found in the database.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Guest Statistics -->
+        <div class="two-column">
+            <div class="section">
+                <h2><i class="fas fa-chart-bar"></i> Age Distribution</h2>
+                <div class="age-chart">
+                    {% if age_groups %}
+                    <div class="chart-container">
+                        {% for group in age_groups %}
+                        <div class="chart-item">
+                            <div class="chart-label">
+                                <span>{{ group.name if group.name else 'Unknown' }}</span>
+                                <span>{{ group.count if group.count else 0 }} guests</span>
+                            </div>
+                            <div class="chart-bar">
+                                {% if group.percentage is defined and group.percentage is not none %}
+                                <div class="chart-fill" style="width: {{ '%.2f'|format(group.percentage|float) }}%"></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p>No age data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="section">
+                <h2><i class="fas fa-info-circle"></i> Guest Information</h2>
+                <div class="info-cards">
+                    <div class="info-card">
+                        <i class="fas fa-user-friends"></i>
+                        <div>
+                            <h3>Total Guests</h3>
+                            <p>{{ total_guests|default(0) }} registered guests</p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <h3>Contact Info</h3>
+                            <p>{{ guests_with_phones|default(0) }} guests with phones</p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <h3>Email Coverage</h3>
+                            <p>{{ guests_with_email|default(0) }} guests with email</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Hotel Management System &copy; 2024 | Total Guests: {{ total_guests|default(0) }}</p>
+    </footer>
+
+    <script>
+        function searchGuests() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const table = document.getElementById('guestsTable');
+            const rows = table.getElementsByTagName('tr');
+            
+            for (let i = 1; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    if (cells[j].textContent.toLowerCase().includes(input)) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+        
+        function editGuest(guestId) {
+            if (guestId && guestId !== '0') {
+                alert('Edit guest ' + guestId + ' - This feature would open an edit form.');
+            } else {
+                alert('Invalid guest ID');
+            }
+        }
+        
+        function viewGuest(guestId) {
+            if (guestId && guestId !== '0') {
+                alert('View details for guest ' + guestId);
+            } else {
+                alert('Invalid guest ID');
+            }
+        }
+        
+        // Make search work on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchGuests();
+            }
+        });
+    </script>
+
+    <style>
+        .phone-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .phone-badge {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            display: inline-block;
+            width: fit-content;
+        }
+        
+        .no-phone {
+            color: #999;
+            font-style: italic;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+        
+        .age-chart {
+            margin-top: 1rem;
+        }
+        
+        .chart-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .chart-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-label {
+            display: flex;
+            justify-content: space-between;
+            width: 120px;
+            font-size: 0.9rem;
+        }
+        
+        .chart-bar {
+            flex: 1;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .chart-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            border-radius: 4px;
+        }
+        
+        .info-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .info-card {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .info-card i {
+            font-size: 1.5rem;
+            color: #2196F3;
+        }
+        
+        .info-card h3 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        
+        .info-card p {
+            font-size: 0.9rem;
+            color: #666;
+        }
+    </style>
+</body>
+</html>
